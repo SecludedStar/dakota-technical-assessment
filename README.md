@@ -14,15 +14,15 @@ This project implements an end-to-end data pipeline that:
 ## Architecture
 
 ```
-EIA API ──────┐                    ┌─── PostgreSQL ─────────────────────┐
-              │    Ingestion       │  raw.* → staging.* → analytics.*  │
-              ├───────────────────►│         (dbt transforms)          │
-Enrichment   │                    └─────────────┬───────────────────────┘
-   API ───────┘                                 │
-                                                ▼
-                                        Dagster Orchestration
-                                                │
-                                                ▼
+EIA API ──────┐                    ┌─────────── PostgreSQL ─────────────┐
+              │    Ingestion       │  raw.* → staging.* → analytics.*   │
+              ├───────────────────►│         (dbt transforms)           │
+Enrichment    │                    └─────────────┬─────────────────────┘
+   API ───────┘                                  │
+                                                 ▼
+                                       Dagster Orchestration
+                                                 │
+                                                 ▼
                                     ┌───────────────────────┐
                                     │  Reports & Analytics  │
                                     │  Excel │ PDF │ Jupyter│

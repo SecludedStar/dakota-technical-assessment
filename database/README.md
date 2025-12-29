@@ -6,19 +6,19 @@ PostgreSQL database schema implementing a medallion architecture for energy anal
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│                         PostgreSQL                                  │
-├─────────────────┬─────────────────┬─────────────────────────────────┤
-│      raw        │    staging      │          analytics              │
-├─────────────────┼─────────────────┼─────────────────────────────────┤
-│ Source data     │ Cleaned data    │ Business metrics                │
-│ as-is           │ (dbt managed)   │ (dbt managed)                   │
-│                 │                 │                                 │
-│ • EIA prices    │ • stg_wells     │ • well_performance_daily        │
-│ • wells         │ • stg_prod      │ • equipment_health_summary      │
-│ • production    │ • stg_equipment │ • emissions_analysis            │
-│ • equipment     │ • stg_emissions │ • price_correlation             │
-│ • emissions     │                 │                                 │
-└─────────────────┴─────────────────┴─────────────────────────────────┘
+│                            PostgreSQL                               │
+├───────────────────┬───────────────────┬─────────────────────────────┤
+│       raw         │      staging      │         analytics           │
+├───────────────────┼───────────────────┼─────────────────────────────┤
+│ Source data       │ Cleaned data      │ Business metrics            │
+│ as-is             │ (dbt managed)     │ (dbt managed)               │
+│                   │                   │                             │
+│ • EIA prices      │ • stg_wells       │ • fct_well_performance      │
+│ • wells           │ • stg_production  │ • fct_equipment_health      │
+│ • production      │ • stg_equipment   │ • fct_emissions_daily       │
+│ • equipment       │ • stg_emissions   │ • dim_operator_summary      │
+│ • emissions       │                   │                             │
+└───────────────────┴───────────────────┴─────────────────────────────┘
 ```
 
 ## Raw Layer Tables
