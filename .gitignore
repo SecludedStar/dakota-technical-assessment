@@ -4,6 +4,9 @@ __pycache__/
 *$py.class
 *.so
 .Python
+env/
+venv/
+ENV/
 build/
 develop-eggs/
 dist/
@@ -20,13 +23,20 @@ wheels/
 .installed.cfg
 *.egg
 
-# Virtual Environment
-venv/
-env/
-ENV/
-.venv
+# Jupyter Notebook
+.ipynb_checkpoints
 
-# IDEs
+# pytest
+.pytest_cache/
+.coverage
+htmlcov/
+
+# dbt
+dbt/logs/
+dbt/target/
+dbt/dbt_packages/
+
+# IDE
 .vscode/
 .idea/
 *.swp
@@ -34,55 +44,19 @@ ENV/
 *~
 .DS_Store
 
-# Environment Variables
+# Environment
 .env
 .env.local
-
-# Database
-*.db
-*.sqlite
-*.sqlite3
 
 # Docker
 *.log
 
-# dbt
-dbt/logs/
-dbt/target/
-dbt/dbt_packages/
-dbt/.user.yml
+# Reports output (keep only final generated reports)
+reports/output/test_*.ipynb
+reports/output/test_*.html
+reports/output/test_*.pdf
+reports/output/test_*.xlsx
 
-# Jupyter
-.ipynb_checkpoints/
-*.ipynb_checkpoints
-
-# Reports (keep templates, ignore generated)
-reports/generated/*
-!reports/generated/.gitkeep
-
-# Orchestration logs and metadata
-orchestration/logs/
-orchestration/.dagster/
-orchestration/.airflow/
-orchestration/.prefect/
-
-# Test coverage
-.coverage
-htmlcov/
-.pytest_cache/
-
-# OS
-Thumbs.db
-.DS_Store
-
-# Sensitive data
-*credentials*
-*secrets*
-*.pem
-*.key
-
-# Temporary files
-*.tmp
-tmp/
-temp/
-.history/*
+# Database
+*.db
+*.sqlite

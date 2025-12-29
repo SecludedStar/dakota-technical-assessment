@@ -1,0 +1,89 @@
+version: 2
+
+models:
+  - name: fct_well_performance_daily
+    description: "Daily well performance metrics for operational dashboards"
+    columns:
+      - name: well_id
+        description: "Unique well identifier"
+        tests:
+          - not_null
+      - name: production_date
+        description: "Date of production"
+        tests:
+          - not_null
+      - name: oil_bbl
+        description: "Daily oil production in barrels"
+      - name: gas_mcf
+        description: "Daily gas production in MCF"
+      - name: boe_total
+        description: "Barrel of Oil Equivalent (oil + gas/6)"
+      - name: est_total_revenue_usd
+        description: "Estimated daily revenue"
+      - name: uptime_pct
+        description: "Operational uptime percentage"
+      - name: water_cut_pct
+        description: "Water cut percentage"
+
+  - name: fct_equipment_health
+    description: "Equipment health and maintenance status for planning"
+    columns:
+      - name: equipment_id
+        description: "Unique equipment identifier"
+        tests:
+          - unique
+          - not_null
+      - name: health_score
+        description: "Health score 0-100"
+      - name: health_category
+        description: "Categorical health status"
+      - name: risk_level
+        description: "Equipment risk level (Critical, High, Medium, Low)"
+        tests:
+          - accepted_values:
+              values: ['Critical', 'High', 'Medium', 'Low']
+      - name: maintenance_priority_score
+        description: "Score for prioritizing maintenance (higher = more urgent)"
+      - name: estimated_remaining_life
+        description: "Estimated time until replacement"
+
+  - name: fct_emissions_daily
+    description: "Daily emissions data for environmental reporting"
+    columns:
+      - name: well_id
+        description: "Well identifier"
+        tests:
+          - not_null
+      - name: measurement_date
+        description: "Date of measurement"
+        tests:
+          - not_null
+      - name: total_emissions_kg
+        description: "Total emissions in kg"
+      - name: co2_equivalent_kg
+        description: "Total GHG as CO2 equivalent"
+      - name: leak_detected
+        description: "Flag for leak detection"
+      - name: environmental_risk
+        description: "Environmental risk level"
+
+  - name: dim_operator_summary
+    description: "Executive summary metrics aggregated by operator"
+    columns:
+      - name: operator
+        description: "Operating company name"
+        tests:
+          - unique
+          - not_null
+      - name: total_wells
+        description: "Total wells operated"
+      - name: active_wells
+        description: "Currently active wells"
+      - name: total_boe_30d
+        description: "Total BOE production last 30 days"
+      - name: avg_equipment_health
+        description: "Average equipment health score"
+      - name: critical_equipment
+        description: "Count of critical equipment"
+      - name: leak_events_30d
+        description: "Leak events in last 30 days"

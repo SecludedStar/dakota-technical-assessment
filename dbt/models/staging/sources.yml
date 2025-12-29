@@ -1,0 +1,132 @@
+version: 2
+
+sources:
+  - name: raw
+    description: "Raw data layer - source data as ingested"
+    database: "{{ env_var('POSTGRES_DB', 'energy_analytics') }}"
+    schema: raw
+    
+    tables:
+      - name: wells
+        description: "Well master data from enrichment API"
+        columns:
+          - name: well_id
+            description: "Unique well identifier (API number format)"
+            tests:
+              - unique
+              - not_null
+          - name: well_name
+            description: "Human-readable well name"
+          - name: operator
+            description: "Operating company"
+          - name: basin
+            description: "Geological basin name"
+          - name: state
+            description: "US state abbreviation"
+          - name: latitude
+            description: "Well location latitude"
+          - name: longitude
+            description: "Well location longitude"
+          - name: well_type
+            description: "Type of well: Oil, Gas, or Dual"
+          - name: spud_date
+            description: "Date drilling commenced"
+          - name: status
+            description: "Current well status: Active, Inactive, Plugged"
+          - name: ingested_at
+            description: "Timestamp when record was loaded"
+
+      - name: production
+        description: "Daily well production records"
+        columns:
+          - name: well_id
+            description: "Foreign key to wells table"
+            tests:
+              - not_null
+          - name: production_date
+            description: "Date of production"
+            tests:
+              - not_null
+          - name: oil_bbl
+            description: "Oil production in barrels"
+          - name: gas_mcf
+            description: "Gas production in MCF"
+          - name: water_bbl
+            description: "Water production in barrels"
+          - name: uptime_hours
+            description: "Hours of operation (0-24)"
+          - name: choke_size
+            description: "Choke size in 64ths of an inch"
+          - name: tubing_pressure_psi
+            description: "Tubing pressure in PSI"
+          - name: casing_pressure_psi
+            description: "Casing pressure in PSI"
+
+      - name: equipment
+        description: "Equipment status and maintenance data"
+        columns:
+          - name: equipment_id
+            description: "Unique equipment identifier"
+            tests:
+              - unique
+              - not_null
+          - name: well_id
+            description: "Foreign key to wells table"
+            tests:
+              - not_null
+          - name: equipment_type
+            description: "Type of equipment"
+          - name: manufacturer
+            description: "Equipment manufacturer"
+          - name: health_score
+            description: "Health score 0-100"
+          - name: status
+            description: "Operational status"
+          - name: alerts
+            description: "JSON array of active alerts"
+
+      - name: emissions
+        description: "Environmental emissions monitoring"
+        columns:
+          - name: well_id
+            description: "Foreign key to wells table"
+            tests:
+              - not_null
+          - name: measurement_date
+            description: "Date of measurement"
+            tests:
+              - not_null
+          - name: methane_kg
+            description: "Methane emissions in kg"
+          - name: co2_kg
+            description: "CO2 emissions in kg"
+          - name: voc_kg
+            description: "VOC emissions in kg"
+          - name: leak_detected
+            description: "Boolean flag for leak detection"
+
+      - name: eia_natural_gas_prices
+        description: "EIA natural gas price data"
+        columns:
+          - name: period
+            description: "Time period (YYYY-MM format)"
+            tests:
+              - not_null
+          - name: series
+            description: "Price series identifier"
+          - name: value
+            description: "Price value"
+          - name: units
+            description: "Price units"
+
+      - name: eia_petroleum_prices
+        description: "EIA petroleum spot price data"
+        columns:
+          - name: period
+            description: "Date (YYYY-MM-DD format)"
+            tests:
+              - not_null
+          - name: product
+            description: "Product code"
+          - name: value
+            description: "Price value"

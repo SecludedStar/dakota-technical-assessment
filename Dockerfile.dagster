@@ -1,0 +1,48 @@
+FROM python:3.11-slim
+
+WORKDIR /opt/dagster/app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    git \
+    curl \
+    libpq-dev \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python dependencies
+RUN pip install --no-cache-dir \
+    dagster \
+    dagster-webserver \
+    dagster-postgres \
+    dagster-dbt \
+    dbt-postgres \
+    psycopg2-binary \
+    httpx \
+    pandas \
+    openpyxl \
+    matplotlib \
+    seaborn \
+    reportlab \
+    nbformat \
+    nbconvert \
+    papermill \
+    ipykernel
+
+# Create dagster home directory
+RUN mkdir -p /opt/dagster/dagster_home
+
+# Copy dagster configuration
+COPY dagster.yaml /opt/dagster/dagster_home/dagster.yaml
+
+# Copy application code
+COPY orchestration /opt/dagster/app/orchestration
+COPY ingestion /opt/dagster/app/ingestion
+COPY dbt /opt/dagster/app/dbt
+COPY reports /opt/dagster/app/reports
+
+# Set Python path
+ENV PYTHONPATH=/opt/dagster/app:/opt/dagster/app/reports
+
+# Default command (overridden in docker-compose)
+CMD ["dagster-webserver", "-h", "0.0.0.0", "-p", "3000"]
