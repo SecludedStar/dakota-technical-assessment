@@ -1,40 +1,113 @@
-version: '3.8'
-
-# This is a starter template. Modify and extend based on your implementation.
-# The code below is just for example, we expect you to modify it.
+version: "3.8"
 
 services:
-  # PostgreSQL Database or other database
   postgres:
     image: postgres:15-alpine
-    container_name: dakota_postgres
+    container_name: dakota-postgres
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-energy_analytics}
-      POSTGRES_USER: ${POSTGRES_USER:-dakota_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change_me}
-    ports:
-      - "5432:5432"
+      POSTGRES_USER: ${POSTGRES_USER:-dakota}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dakota_dev}
+      POSTGRES_DB: ${POSTGRES_DB:-dakota_analytics}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./database/init:/docker-entrypoint-initdb.d
-    networks:
-      - dakota_network
+      - ./database/init.sql:/docker-entrypoint-initdb.d/01_init.sql:ro
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-dakota_user}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-dakota} -d ${POSTGRES_DB:-dakota_analytics}"]
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - dakota-network
 
-  # Add your services here:
-  # - FastAPI service
-  # - Orchestrator
-  # - dbt
-  # - Jupyter (optional for notebooks)
-  # etc.
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: dakota-api
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8000
+    ports:
+      - "${API_PORT:-8000}:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - dakota-network
 
-networks:
-  dakota_network:
-    driver: bridge
+  dagster-webserver:
+    build:
+      context: .
+      dockerfile: Dockerfile.dagster
+    container_name: dakota-dagster-webserver
+    command: ["dagster-webserver", "-h", "0.0.0.0", "-p", "3000", "-m", "orchestration"]
+    environment:
+      DAGSTER_HOME: /opt/dagster/dagster_home
+      DAGSTER_PG_URL: postgresql://${POSTGRES_USER:-dakota}:${POSTGRES_PASSWORD:-dakota_dev}@postgres:5432/${POSTGRES_DB:-dakota_analytics}
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: ${POSTGRES_USER:-dakota}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dakota_dev}
+      POSTGRES_DB: ${POSTGRES_DB:-dakota_analytics}
+      EIA_API_KEY: ${EIA_API_KEY:-demo_key}
+      ENRICHMENT_API_URL: http://api:8000
+      PYTHONPATH: /opt/dagster/app:/opt/dagster/app/reports
+    volumes:
+      - dagster_home:/opt/dagster/dagster_home
+      - ./orchestration:/opt/dagster/app/orchestration:ro
+      - ./ingestion:/opt/dagster/app/ingestion:ro
+      - ./dbt:/opt/dagster/app/dbt
+      - ./reports:/opt/dagster/app/reports
+    ports:
+      - "${DAGSTER_PORT:-3000}:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+    networks:
+      - dakota-network
+
+  dagster-daemon:
+    build:
+      context: .
+      dockerfile: Dockerfile.dagster
+    container_name: dakota-dagster-daemon
+    command: ["dagster-daemon", "run", "-m", "orchestration"]
+    environment:
+      DAGSTER_HOME: /opt/dagster/dagster_home
+      DAGSTER_PG_URL: postgresql://${POSTGRES_USER:-dakota}:${POSTGRES_PASSWORD:-dakota_dev}@postgres:5432/${POSTGRES_DB:-dakota_analytics}
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: ${POSTGRES_USER:-dakota}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dakota_dev}
+      POSTGRES_DB: ${POSTGRES_DB:-dakota_analytics}
+      EIA_API_KEY: ${EIA_API_KEY:-demo_key}
+      ENRICHMENT_API_URL: http://api:8000
+      PYTHONPATH: /opt/dagster/app:/opt/dagster/app/reports
+    volumes:
+      - dagster_home:/opt/dagster/dagster_home
+      - ./orchestration:/opt/dagster/app/orchestration:ro
+      - ./ingestion:/opt/dagster/app/ingestion:ro
+      - ./dbt:/opt/dagster/app/dbt
+      - ./reports:/opt/dagster/app/reports
+    depends_on:
+      postgres:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+    networks:
+      - dakota-network
 
 volumes:
   postgres_data:
+  dagster_home:
+
+networks:
+  dakota-network:
+    driver: bridge

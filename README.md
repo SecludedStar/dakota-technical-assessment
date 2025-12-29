@@ -1,156 +1,254 @@
-# Dakota Analytics - Data Engineering Technical Assessment
+# Dakota Analytics Technical Assessment
+
+A production-ready data pipeline for energy analytics demonstrating modern data engineering practices.
 
 ## Overview
 
-Build an end-to-end data pipeline that ingests source data, enriches it with synthetic data, transforms it using dbt, and produces analytical reports. Using AI tooling is fine, just be professional.
+This project implements an end-to-end data pipeline that:
+- Ingests data from the **EIA API** (energy prices, production) and an internal **Enrichment API** (wells, equipment, emissions)
+- Stores data in **PostgreSQL** using a medallion architecture (raw → staging → analytics)
+- Transforms data with **dbt** following staging → intermediate → marts pattern
+- Orchestrates everything with **Dagster** for scheduling, monitoring, and lineage
+- Generates automated **reports** (Excel dashboards, PDF summaries)
 
-## The Challenge
-
-![Architecture Diagram](data-engineer-applicant.png)
-
-Implement a production-ready data pipeline with these components:
-
-### 1. FastAPI Data Service (20 points)
-Create a FastAPI application that generates synthetic enrichment data relevant to energy analytics.
-- Use `uv` for dependency management
-- Design and implement useful enrichment data schemas
-- Containerize the service
-- See [api/README.md](api/README.md)
-
-### 2. Data Ingestion (20 points)
-Build clients to fetch data from:
-- A source of your choice
-- OR (not and) EIA API (https://www.eia.gov/opendata/) - register for free API key
-- Your FastAPI enrichment service
-
-Implement error handling, retries, and logging.
-See [ingestion/README.md](ingestion/README.md)
-
-### 3. Orchestration (20 points)
-Choose and implement a workflow orchestrator (Dagster, Airflow, Prefect, etc.)
-- Daily batch ingestion from EIA
-- Frequent ingestion from FastAPI service
-- dbt transformation execution
-- Data quality checks
-- Report generation
-- Error handling and monitoring
-
-See [orchestration/README.md](orchestration/README.md)
-
-### 4. Database Design (15 points)
-Design a Database schema for:
-- Raw data storage
-- Transformed analytics tables
-- Time-series considerations if any
-
-Include initialization scripts and ER diagram.
-See [database/README.md](database/README.md)
-
-### 5. dbt Transformations (20 points)
-Implement layered dbt models:
-- Organize in chosen architecture pattern
-- Include data quality tests
-- Document models
-- Use incremental models where appropriate
-
-See [dbt/README.md](dbt/README.md)
-
-### 6. Reporting (10 points)
-Generate automated reports of your choice:
-- Excel dashboard with metrics and charts
-- Jupyter notebook with exploratory analysis
-- PDF executive summary
-- Doesn't have to be all, just relevant
-
-See [reports/README.md](reports/README.md)
-
-## Deliverables
-
-### Required Structure
+## Architecture
 
 ```
-your-fork/
-├── README.md              # Update with setup instructions
-├── docker-compose.yml     # All services defined
-├── run.sh / run.bat       # Startup script (see below)
-├── .env.example          # Environment variables template
-│
-├── api/                  # FastAPI service
-├── ingestion/            # Data ingestion clients
-├── orchestration/        # Your orchestrator implementation
-├── database/             # Schema and init scripts
-├── dbt/                  # dbt project
-├── reports/              # Report generation
-│
-├── docs/                 # YOUR DOCUMENTATION
-│   ├── architecture.md   # System architecture and design
-│   ├── decisions.md      # Technical decisions and rationale
-│   └── er_diagram.png    # Database schema diagram
-│
-└── tests/                # Your tests
-
+EIA API ──────┐                    ┌─── PostgreSQL ─────────────────────┐
+              │    Ingestion       │  raw.* → staging.* → analytics.*  │
+              ├───────────────────►│         (dbt transforms)          │
+Enrichment   │                    └─────────────┬───────────────────────┘
+   API ───────┘                                 │
+                                                ▼
+                                        Dagster Orchestration
+                                                │
+                                                ▼
+                                    ┌───────────────────────┐
+                                    │  Reports & Analytics  │
+                                    │  Excel │ PDF │ Jupyter│
+                                    └───────────────────────┘
 ```
 
-### Documentation (in `/docs/`)
+See [docs/architecture.md](docs/architecture.md) for detailed system design.
 
-Create these files explaining your work:
+## Quick Start
 
-**`docs/architecture.md`**
-- System design overview
-- Technology choices and why
-- Data flow
-- Scalability considerations
+### Prerequisites
+- Docker and Docker Compose
+- EIA API key ([register here](https://www.eia.gov/opendata/register.php))
 
-**`docs/decisions.md`**
-- Key technical decisions
-- Trade-offs considered
-- Alternative approaches
-- Rationale for choices
+### Setup
 
-### Startup Script Requirements
+```bash
+# Clone the repository
+git clone <repository-url>
+cd dakota-assessment
 
-**Create a script (e.g., `run.sh` for Unix/Mac or `run.bat` for Windows) that:**
+# Start all services (creates .env automatically with demo_key)
+chmod +x run.sh
+./run.sh start
 
-1. Sets up the environment (dependencies, `.env` file, builds containers)
-2. Starts all services via docker-compose
-3. Runs the pipeline end-to-end
-4. Generates reports
-5. Provides clear output/logging of what's happening
+# Run the data pipeline
+./run.sh pipeline
 
-The script should be idempotent and handle:
-- First-time setup
-- Subsequent runs
-- Basic error handling
+# View Dagster UI
+open http://localhost:3000
+```
 
-We will evaluate your solution by running this script in a clean environment. Include usage instructions in your README.
+> **Note**: The pipeline works out-of-the-box with `demo_key` for EIA API (rate-limited).
+> For production use, get your own key at [eia.gov](https://www.eia.gov/opendata/register.php).
 
-## Evaluation Criteria
+### Available Commands
 
-- **Technical Excellence (40%)** - Code quality, error handling, testing, performance
-- **Architecture & Design (30%)** - Tool choices, database design, scalability, separation of concerns
-- **Documentation (20%)** - Clarity, completeness, decision rationale
-- **Innovation (10%)** - Creative solutions, best practices, additional value
+```bash
+./run.sh start      # Build and start all services
+./run.sh stop       # Stop all services
+./run.sh status     # Show service status and access points
+./run.sh pipeline   # Run the complete data pipeline
+./run.sh dbt        # Run dbt transformations only
+./run.sh reports    # Generate reports only
+./run.sh logs       # Show service logs
+./run.sh clean      # Remove all containers and data
+```
 
-## Time Expectation
+## Project Structure
 
-Approximately 4-6 hours. Focus on quality and demonstrating best practices.
+```
+dakota-assessment/
+├── api/                    # FastAPI enrichment service
+│   ├── main.py            # API endpoints and synthetic data generation
+│   ├── Dockerfile         # Multi-stage container build
+│   └── pyproject.toml     # uv dependency management
+│
+├── ingestion/              # Data ingestion clients
+│   ├── eia_client.py      # EIA API client with retry logic
+│   ├── enrichment_client.py # Internal API client
+│   └── db_loader.py       # PostgreSQL batch loader
+│
+├── database/               # Database schema
+│   └── init.sql           # Raw schema DDL
+│
+├── dbt/                    # dbt transformations
+│   ├── models/
+│   │   ├── staging/       # Clean and standardize raw data
+│   │   ├── intermediate/  # Join and prepare for marts
+│   │   └── marts/         # Business-ready analytics
+│   └── dbt_project.yml
+│
+├── orchestration/          # Dagster orchestration
+│   ├── assets/            # Software-defined assets
+│   ├── resources/         # Database and API resources
+│   └── jobs/              # Job definitions and schedules
+│
+├── reports/                # Report generation
+│   ├── report_generator.py # Excel, PDF, notebook generation
+│   └── output/            # Generated reports
+│
+├── docs/                   # Documentation
+│   ├── architecture.md    # System design
+│   └── decisions.md       # Technical decisions
+│
+├── docker-compose.yml      # Service orchestration
+├── run.sh                  # Convenience script
+└── .env.example           # Environment template
+```
 
-## Submission
+## Data Model
 
-1. Fork this repository
-2. Implement your solution
-3. Test that your startup script works in a clean environment
-4. Email your repository URL to: **technical-assessment@dakotaanalytics.com**
+### Raw Layer
+| Table | Description |
+|-------|-------------|
+| `eia_natural_gas_prices` | Natural gas spot and futures prices |
+| `eia_petroleum_prices` | Brent/WTI crude oil prices |
+| `wells` | Well metadata and status |
+| `production` | Daily production metrics |
+| `equipment` | Equipment health and alerts |
+| `emissions` | Environmental monitoring |
 
-Include in your email:
-- Your name
-- Repository link (should be public)
-- Brief summary of your approach
+### Analytics Layer (dbt Marts)
+| Model | Description |
+|-------|-------------|
+| `fct_well_performance_daily` | Production metrics with revenue estimates |
+| `fct_equipment_health` | Maintenance priority scoring |
+| `fct_emissions_daily` | Environmental risk categorization |
+| `dim_operator_summary` | Operator-level aggregations |
 
-## Questions?
+## Key Features
 
-For clarification on requirements only: **technical-assessment@dakotaanalytics.com**
+### Technical Excellence
+- **Retry Logic**: Exponential backoff for transient failures
+- **Idempotent Loading**: Upsert patterns prevent duplicates
+- **Type Safety**: Pydantic validation throughout
+- **Testing**: dbt tests, API tests, integration tests
 
-We can clarify requirements but won't help with implementation decisions - that's what we're evaluating!
+### Architecture
+- **Medallion Pattern**: Clear data progression
+- **Separation of Concerns**: Ingestion, transformation, reporting
+- **Resource-Based Design**: Clean configuration management
 
----
+### Documentation
+- Inline code comments
+- dbt model documentation
+- API OpenAPI/Swagger docs
+- Architecture decision records
+
+### Innovation
+- Synthetic data generation with domain realism
+- Maintenance priority scoring algorithm
+- Environmental risk categorization
+- Revenue estimation with price correlation
+
+## API Endpoints
+
+The Enrichment API provides synthetic operational data:
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /health` | Health check |
+| `GET /wells` | Paginated well information |
+| `GET /production` | Daily production metrics |
+| `GET /equipment` | Equipment health data |
+| `GET /emissions` | Environmental monitoring |
+| `GET /bulk/daily-snapshot` | Complete daily data snapshot |
+
+API documentation: http://localhost:8000/docs
+
+## Configuration
+
+### Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `POSTGRES_USER` | Database user | `dakota` |
+| `POSTGRES_PASSWORD` | Database password | `dakota_dev` |
+| `POSTGRES_DB` | Database name | `dakota_analytics` |
+| `EIA_API_KEY` | EIA API key | Required |
+| `API_PORT` | Enrichment API port | `8000` |
+| `DAGSTER_PORT` | Dagster UI port | `3000` |
+
+## Development
+
+### Running dbt Locally
+
+```bash
+cd dbt
+pip install dbt-postgres
+dbt deps
+dbt run --profiles-dir . --target dev
+dbt test --profiles-dir . --target dev
+dbt docs generate && dbt docs serve
+```
+
+### Running Tests
+
+```bash
+# dbt tests
+cd dbt && dbt test
+
+# API tests
+cd api && pytest
+
+# Integration tests
+pytest tests/
+```
+
+## Monitoring
+
+- **Dagster UI**: Asset lineage, run history, schedules
+- **Ingestion Logs**: `raw.ingestion_log` table
+- **dbt Test Results**: Post-transformation validation
+
+## Technology Stack
+
+| Component | Technology |
+|-----------|------------|
+| Orchestration | Dagster |
+| Database | PostgreSQL 15 |
+| Transformations | dbt-core |
+| API Framework | FastAPI |
+| Containerization | Docker Compose |
+| Package Management | uv (API), pip (others) |
+
+## Design Decisions
+
+See [docs/decisions.md](docs/decisions.md) for rationale on:
+- Why Dagster over Airflow
+- PostgreSQL vs. cloud data warehouses
+- Medallion architecture benefits
+- Synthetic data generation approach
+
+## Future Enhancements
+
+- [ ] Incremental dbt models
+- [ ] Streaming ingestion with Kafka
+- [ ] CI/CD with GitHub Actions
+- [ ] Prometheus/Grafana/OpenSearch monitoring
+- [ ] Data contracts for API versioning
+
+## Author
+
+Built as a technical assessment for Dakota Analytics.
+
+## License
+
+MIT

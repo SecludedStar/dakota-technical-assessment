@@ -1,0 +1,136 @@
+version: 2
+
+models:
+  - name: stg_wells
+    description: "Cleaned and standardized well master data"
+    columns:
+      - name: well_id
+        description: "Unique well identifier"
+        tests:
+          - unique
+          - not_null
+      - name: well_name
+        description: "Human-readable well name"
+      - name: operator
+        description: "Operating company name"
+      - name: basin
+        description: "Geological basin"
+      - name: state
+        description: "US state (uppercase)"
+      - name: latitude
+        description: "Well latitude (6 decimal places)"
+      - name: longitude
+        description: "Well longitude (6 decimal places)"
+      - name: well_type
+        description: "Type of well (Oil, Gas, Dual)"
+        tests:
+          - accepted_values:
+              values: ['Oil', 'Gas', 'Dual']
+      - name: status
+        description: "Current well status"
+        tests:
+          - accepted_values:
+              values: ['Active', 'Inactive', 'Plugged']
+      - name: well_age_days
+        description: "Days since spud date"
+
+  - name: stg_production
+    description: "Cleaned daily production records with derived metrics"
+    columns:
+      - name: well_id
+        description: "Well identifier"
+        tests:
+          - not_null
+      - name: production_date
+        description: "Production date"
+        tests:
+          - not_null
+      - name: oil_bbl
+        description: "Oil production in barrels"
+      - name: gas_mcf
+        description: "Gas production in MCF"
+      - name: water_bbl
+        description: "Water production in barrels"
+      - name: water_cut_pct
+        description: "Water cut percentage"
+      - name: gor_mcf_bbl
+        description: "Gas-Oil Ratio"
+      - name: uptime_pct
+        description: "Uptime percentage (0-100)"
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - well_id
+            - production_date
+
+  - name: stg_equipment
+    description: "Cleaned equipment status with health categorization"
+    columns:
+      - name: equipment_id
+        description: "Unique equipment identifier"
+        tests:
+          - unique
+          - not_null
+      - name: well_id
+        description: "Associated well"
+        tests:
+          - not_null
+      - name: health_score
+        description: "Health score (0-100)"
+      - name: health_category
+        description: "Categorical health status"
+        tests:
+          - accepted_values:
+              values: ['Excellent', 'Good', 'Fair', 'Poor', 'Critical']
+      - name: alert_count
+        description: "Number of active alerts"
+      - name: is_maintenance_overdue
+        description: "Flag for overdue maintenance"
+
+  - name: stg_emissions
+    description: "Cleaned emissions data with CO2 equivalents"
+    columns:
+      - name: well_id
+        description: "Well identifier"
+        tests:
+          - not_null
+      - name: measurement_date
+        description: "Measurement date"
+        tests:
+          - not_null
+      - name: methane_kg
+        description: "Methane emissions in kg"
+      - name: co2_kg
+        description: "CO2 emissions in kg"
+      - name: co2_equivalent_kg
+        description: "Total GHG as CO2 equivalent"
+      - name: leak_detected
+        description: "Leak detection flag"
+
+  - name: stg_eia_natural_gas_prices
+    description: "Cleaned EIA natural gas price data"
+    columns:
+      - name: period
+        description: "Original period string"
+        tests:
+          - not_null
+      - name: period_date
+        description: "Parsed date (first of month)"
+      - name: price_value
+        description: "Natural gas price"
+      - name: is_valid_price
+        description: "Flag for valid non-null positive price"
+
+  - name: stg_eia_petroleum_prices
+    description: "Cleaned EIA petroleum spot price data"
+    columns:
+      - name: period
+        description: "Original period string"
+        tests:
+          - not_null
+      - name: price_date
+        description: "Parsed price date"
+      - name: benchmark_name
+        description: "Readable benchmark name (Brent, WTI)"
+      - name: price_usd
+        description: "Price in USD"

@@ -1,0 +1,49 @@
+name: 'energy_analytics'
+version: '1.0.0'
+config-version: 2
+
+profile: 'energy_analytics'
+
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+# Model configurations by folder
+models:
+  energy_analytics:
+    # Staging models - materialized as views for freshness
+    staging:
+      +materialized: view
+      +schema: staging
+      +tags: ["staging"]
+    
+    # Intermediate models - ephemeral to reduce storage
+    intermediate:
+      +materialized: ephemeral
+      +tags: ["intermediate"]
+    
+    # Mart models - materialized as tables for performance
+    marts:
+      +materialized: table
+      +schema: analytics
+      +tags: ["marts"]
+
+# Variable definitions
+vars:
+  # Date range for incremental models
+  start_date: '2024-01-01'
+  # Threshold for equipment health alerts
+  equipment_health_threshold: 70
+  # Emissions leak detection flag
+  include_leak_events: true
+
+# Test configurations
+tests:
+  +severity: warn
